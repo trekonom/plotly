@@ -609,6 +609,65 @@ to_basic.GeomQuantile <- function(data, prestats_data, layout, params, p, ...){
 }
 
 #' @export
+to_basic.GeomDumbbell <- function(data, prestats_data, layout, params, p, ...) {
+  # Adds support for ggalt::geom_dumbbell
+  # Implementation follows ggalt::GeomDumbbell
+  # Setup data for left points
+  points.x <- data
+  points.x <- make_hovertext(points.x, params, c("x", "y"))
+  points.x$colour <- params$colour_x %||% data$colour
+  points.x$xend <- NULL
+  points.x$size <- params$size_x %||% (data$size * 1.2)
+  # Setup data for right points
+  points.xend <- data
+  points.xend <- make_hovertext(points.xend, params, c("xend", "y"))
+  points.xend$x <- points.xend$xend
+  points.xend$xend <- NULL
+  points.xend$colour <- params$colour_xend %||% data$colour
+  points.xend$size <- params$size_xend %||% (data$size * 1.25)
+  # Setup data for dot_guide
+  dot_df <- data
+  dot_df <- merge(dot_df, layout$layout, by = "PANEL", sort = FALSE)
+  dot_df$hovertext <- NULL
+  dot_df$xend <- ifelse(data$xend < data$x, data$xend, data$x)
+  dot_df$x <- dot_df[["x_min"]]
+  dot_df$linetype <- "dotted"
+  dot_df$size <- params$dot_guide_size %||% (data$size * 0.5)
+  dot_df$colour <- params$dot_guide_colour %||% "#5b5b5b"
+  # Copy from to_basic.GeomSegment
+  dot_df$group <- seq_len(nrow(dot_df))
+  others <- dot_df[!names(dot_df) %in% c("x", "y", "xend", "yend")]
+  dot_df <- with(dot_df, {
+    rbind(cbind(x, y, others),
+          cbind(x = xend, y = yend, others))
+  })
+  # Setup data for connecting segment
+  data$hovertext <- NULL
+  # Copy from to_basic.GeomSegment 
+  data$group <- seq_len(nrow(data))
+  others <- data[!names(data) %in% c("x", "y", "xend", "yend")]
+  data <- with(data, {
+    rbind(cbind(x, y, others),
+          cbind(x = xend, y = yend, others))
+  })
+  # Set classes
+  if (is.null(params$dot_guide) | !params$dot_guide) {
+    list(
+      prefix_class(data, "GeomPath"),
+      prefix_class(points.x, "GeomPoint"),
+      prefix_class(points.xend, "GeomPoint")
+    )
+  } else {
+    list(
+      prefix_class(dot_df, "GeomPath"),
+      prefix_class(data, "GeomPath"),
+      prefix_class(points.x, "GeomPoint"),
+      prefix_class(points.xend, "GeomPoint")
+    )
+  }
+}
+
+#' @export
 to_basic.default <- function(data, prestats_data, layout, params, p, ...) {
   data
 }
@@ -1124,4 +1183,42 @@ lty2dash <- function(x) {
     x[idx] <- lookup[x[idx]]
   }
   as.character(x)
+}
+
+# attach a new column (hovertext) to each layer of data
+# only aes given in aes_list are included in hovertext
+make_hovertext <- function(data, params, aes_list) {
+  data$hovertext <- NULL
+  hoverTextAes <- list()
+  hoverTextAes <- list(
+    sapply(aes_list, function(x) append(hoverTextAes, x = params$hoverTextAes[[x]]))
+  )
+  data <- list(data)
+  # Copy from layers2traces
+  data <- Map(function(x, y) {
+    if (nrow(x) == 0) return(x)
+    # make sure the relevant aes exists in the data
+    for (i in seq_along(y)) {
+      aesName <- names(y)[[i]]
+      if (!aesName %in% names(x)) next
+      # TODO: should we be getting the name from scale_*(name) first?
+      varName <- y[[i]]
+      # "automatically" generated group aes is not informative
+      if (identical("group", unique(varName, aesName))) next
+      # add a line break if hovertext already exists
+      if ("hovertext" %in% names(x)) x$hovertext <- paste0(x$hovertext, br())
+      # text aestheic should be taken verbatim (for custom tooltips)
+      prefix <- if (identical(aesName, "text")) "" else paste0(varName, ": ")
+      # look for the domain, if that's not found, provide the range (useful for identity scales)
+      txt <- x[[paste0(aesName, "_plotlyDomain")]] %||% x[[aesName]]
+      suffix <- tryNULL(format(txt, justify = "none")) %||% ""
+      if (inherits(x, "GeomBar") && identical(aesName, "y")) {
+        suffix <- format(x[["ymax"]] - x[["ymin"]], justify = "none")
+      }
+      x$hovertext <- paste0(x$hovertext, prefix, suffix)
+    }
+    x$hovertext <- x$hovertext %||% ""
+    x
+  }, data, hoverTextAes)
+  data[[1]]
 }
