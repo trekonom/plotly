@@ -651,20 +651,12 @@ to_basic.GeomDumbbell <- function(data, prestats_data, layout, params, p, ...) {
           cbind(x = xend, y = yend, others))
   })
   # Set classes
-  if (is.null(params$dot_guide) | !params$dot_guide) {
-    list(
-      prefix_class(data, "GeomPath"),
-      prefix_class(points.x, "GeomPoint"),
-      prefix_class(points.xend, "GeomPoint")
-    )
-  } else {
-    list(
-      prefix_class(dot_df, "GeomPath"),
-      prefix_class(data, "GeomPath"),
-      prefix_class(points.x, "GeomPoint"),
-      prefix_class(points.xend, "GeomPoint")
-    )
-  }
+  list(
+    if (isTRUE(params$dot_guide)) prefix_class(dot_df, "GeomPath"),
+    prefix_class(data, "GeomPath"),
+    prefix_class(points.x, "GeomPoint"),
+    prefix_class(points.xend, "GeomPoint")
+  )
 }
 
 #' @export
