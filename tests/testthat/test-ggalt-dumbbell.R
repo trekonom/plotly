@@ -1,9 +1,6 @@
 context("Dumbbell")
 
 test_that("geom_dumbbell is rendered", {
-  # Helper function
-  get_test_stat <- function(el, from) L$x$data[[el]]$x[len <- !is.na(L$x$data[[el]]$y)][seq(from, sum(len), 2)]
-  # Test on example from ggalt::geom_dumbbell 
   d <- data.frame(trt = LETTERS[1:5], l = c(20, 40, 10, 30, 50), r = c(70, 50, 30, 60, 80))
 
   g <- ggplot(d, aes(y = trt, x = l, xend = r)) +
@@ -26,10 +23,10 @@ test_that("geom_dumbbell is rendered", {
   # Check for four layers
   expect_equivalent(length(L$x$data), 4)
   # dot_guide ends at left data points
-  expect_equivalent(get_test_stat(1, 2), d$l)
+  expect_equivalent(L$x$data[[1]]$x[len <- !is.na(L$x$data[[1]]$y)][seq(2, sum(len), 2)], d$l)
   # segment connects left and right data points
-  expect_equivalent(get_test_stat(2, 1), d$l)
-  expect_equivalent(get_test_stat(2, 2), d$r)
+  expect_equivalent(L$x$data[[2]]$x[len <- !is.na(L$x$data[[2]]$y)][seq(1, sum(len), 2)], d$l)
+  expect_equivalent(L$x$data[[2]]$x[len <- !is.na(L$x$data[[2]]$y)][seq(2, sum(len), 2)], d$r)
   # point layers correspond to left and right data points
   expect_equivalent(L$x$data[[3]]$x, d$l)
   expect_equivalent(L$x$data[[4]]$x, d$r)

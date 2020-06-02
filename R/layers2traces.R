@@ -588,18 +588,18 @@ to_basic.GeomDumbbell <- function(data, prestats_data, layout, params, p, ...) {
   # Adds support for ggalt::geom_dumbbell
   # Implementation follows ggalt::GeomDumbbell
   # Setup data for left points
-  points_x <- data
-  points_x <- make_hovertext_aes(points_x, params, c("x", "y"))
-  points_x$colour <- params$colour_x %||% data$colour
-  points_x$xend <- NULL
-  points_x$size <- params$size_x %||% (data$size * 1.2)
+  points.x <- data
+  points.x <- make_hovertext(points.x, params, c("x", "y"))
+  points.x$colour <- params$colour_x %||% data$colour
+  points.x$xend <- NULL
+  points.x$size <- params$size_x %||% (data$size * 1.2)
   # Setup data for right points
-  points_xend <- data
-  points_xend <- make_hovertext_aes(points_xend, params, c("xend", "y"))
-  points_xend$x <- points_xend$xend
-  points_xend$xend <- NULL
-  points_xend$colour <- params$colour_xend %||% data$colour
-  points_xend$size <- params$size_xend %||% (data$size * 1.25)
+  points.xend <- data
+  points.xend <- make_hovertext(points.xend, params, c("xend", "y"))
+  points.xend$x <- points.xend$xend
+  points.xend$xend <- NULL
+  points.xend$colour <- params$colour_xend %||% data$colour
+  points.xend$size <- params$size_xend %||% (data$size * 1.25)
   # Setup data for dot_guide
   dot_df <- data
   dot_df <- merge(dot_df, layout$layout, by = "PANEL", sort = FALSE)
@@ -629,8 +629,8 @@ to_basic.GeomDumbbell <- function(data, prestats_data, layout, params, p, ...) {
   list(
     if (isTRUE(params$dot_guide)) prefix_class(dot_df, "GeomPath"),
     prefix_class(data, "GeomPath"),
-    prefix_class(points_x, "GeomPoint"),
-    prefix_class(points_xend, "GeomPoint")
+    prefix_class(points.x, "GeomPoint"),
+    prefix_class(points.xend, "GeomPoint")
   )
 }
 
@@ -1154,22 +1154,15 @@ lty2dash <- function(x) {
 
 # attach a new column (hovertext) to each layer of data
 # only aes given in aes_list are included in hovertext
-make_hovertext_aes <- function(data, params, aes_list) {
-  # Clear hovertext
+make_hovertext <- function(data, params, aes_list) {
   data$hovertext <- NULL
-  # Setup list of aes to include in hovertext
-  hoverTextAes <- Reduce(
-    function(l, x) append(l, params$hoverTextAes[[x]]), aes_list,
-    init = list()
+  hoverTextAes <- list()
+  hoverTextAes <- list(
+    sapply(aes_list, function(x) append(hoverTextAes, x = params$hoverTextAes[[x]]))
   )
-  hoverTextAes <- setNames(hoverTextAes, aes_list)
-  # Attach new column hovertext to data
-  make_hovertext(list(data), list(hoverTextAes))[[1]]
-}
-
-# attach a new column (hovertext) to each layer of data
-make_hovertext <- function(data, hoverTextAes) {
-  Map(function(x, y) {
+  data <- list(data)
+  # Copy from layers2traces
+  data <- Map(function(x, y) {
     if (nrow(x) == 0) return(x)
     # make sure the relevant aes exists in the data
     for (i in seq_along(y)) {
@@ -1186,7 +1179,6 @@ make_hovertext <- function(data, hoverTextAes) {
       # look for the domain, if that's not found, provide the range (useful for identity scales)
       txt <- x[[paste0(aesName, "_plotlyDomain")]] %||% x[[aesName]]
       suffix <- tryNULL(format(txt, justify = "none")) %||% ""
-      # put the height of the bar in the tooltip
       if (inherits(x, "GeomBar") && identical(aesName, "y")) {
         suffix <- format(x[["ymax"]] - x[["ymin"]], justify = "none")
       }
@@ -1194,5 +1186,6 @@ make_hovertext <- function(data, hoverTextAes) {
     }
     x$hovertext <- x$hovertext %||% ""
     x
-  }, data, hoverTextAes)  
+  }, data, hoverTextAes)
+  data[[1]]
 }
