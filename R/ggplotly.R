@@ -1376,8 +1376,14 @@ gdef2trace <- function(gdef, theme, gglayout) {
     # sometimes the key has missing values, which we can ignore
     gdef$key <- gdef$key[!is.na(gdef$key$.value), ]
     rng <- range(gdef$bar$value)
-    gdef$bar$value <- scales::rescale(gdef$bar$value, from = rng)
+    gdef$bar$value <- if (length(unique(rng)) > 1) {
+      scales::rescale(gdef$bar$value, from = rng)  
+    } else {
+      seq(0, 1, length.out = nrow(gdef$bar))
+    }
     gdef$key$.value <- scales::rescale(gdef$key$.value, from = rng)
+    
+    
     list(
       x = with(gglayout$xaxis, if (identical(tickmode, "auto")) ticktext else tickvals)[[1]],
       y = with(gglayout$yaxis, if (identical(tickmode, "auto")) ticktext else tickvals)[[1]],
