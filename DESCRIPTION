@@ -1,6 +1,6 @@
 Package: plotly
 Title: Create Interactive Web Graphics via 'plotly.js'
-Version: 4.10.1.9000
+Version: 4.10.4.9000
 Authors@R: c(person("Carson", "Sievert", role = c("aut", "cre"),
     email = "cpsievert1@gmail.com", comment = c(ORCID = "0000-0002-4958-2844")),
     person("Chris", "Parmer", role = "aut",
@@ -65,14 +65,13 @@ Suggests:
     webshot,
     listviewer,
     dendextend,
-    maptools,
-    rgeos,
     sf,
     png,
     IRdisplay,
     processx,
     plotlyGeoAssets,
     forcats,
+    withr,
     palmerpenguins,
     rversions,
     reticulate,
@@ -82,6 +81,7 @@ RoxygenNote: 7.2.3
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 Config/Needs/check:
+    tidyverse/ggplot2,
     rcmdcheck,
     devtools,
     reshape2

@@ -79,7 +79,8 @@ layers2traces <- function(data, prestats_data, layout, p) {
   discreteScales <- list()
   for (sc in p$scales$non_position_scales()$scales) {
     if (sc$is_discrete()) {
-      discreteScales[[sc$aesthetics]] <- sc
+      nm <- paste(sc$aesthetics, collapse = "_")
+      discreteScales[[nm]] <- sc
     }
   }
   # Convert "high-level" geoms to their "low-level" counterpart
@@ -103,7 +104,10 @@ layers2traces <- function(data, prestats_data, layout, p) {
   # now to the actual layer -> trace conversion
   trace.list <- list()
   
-  aes_no_guide <- names(p$guides)[vapply(p$guides, identical, logical(1), "none")]
+  # ggplot2 >v3.4.2 (specifically #4879) moved the guides system to ggproto, 
+  # which moved the location of the name->value fields
+  guides <- if (inherits(p$guides, "ggproto")) p$guides$guides else p$guides
+  aes_no_guide <- names(guides)[vapply(guides, identical, logical(1), "none")]
   
   for (i in seq_along(datz)) {
     d <- datz[[i]]
@@ -445,7 +449,9 @@ to_basic.GeomHline <- function(data, prestats_data, layout, params, p, ...) {
     data = layout$layout, cols = paste0(x, c("_min", "_max")), values_to = x, names_to = "variable"
   ) 
   lay <- as.data.frame(lay)
-  data <- merge(lay[c("PANEL", x)], data, by = "PANEL")
+  if (nrow(data) > 0) {
+    data <- merge(lay[c("PANEL", x)], data, by = "PANEL")
+  }
   data[["x"]] <- data[[x]]
   data[["y"]] <- data$yintercept
   prefix_class(data, c("GeomHline", "GeomPath"))
@@ -462,7 +468,9 @@ to_basic.GeomVline <- function(data, prestats_data, layout, params, p, ...) {
     data = layout$layout, cols = paste0(y, c("_min", "_max")), values_to = y, names_to = "variable"
   ) 
   lay <- as.data.frame(lay)
-  data <- merge(lay[c("PANEL", y)], data, by = "PANEL")
+  if (nrow(data) > 0) {
+    data <- merge(lay[c("PANEL", y)], data, by = "PANEL")
+  }
   data[["y"]] <- data[[y]]
   data[["x"]] <- data$xintercept
   prefix_class(data, c("GeomVline", "GeomPath"))
@@ -760,7 +768,12 @@ geom2trace.GeomPoint <- function(data, params, p) {
   # fill is only relevant for pch %in% 21:25
   pch <- uniq(data$shape) %||% params$shape %||% GeomPoint$default_aes$shape
   if (any(idx <- pch %in% 21:25) || any(idx <- !is.null(data[["fill_plotlyDomain"]]))) {
-    L$marker$color[idx] <- aes2plotly(data, params, "fill")[idx]
+    fill_value <- aes2plotly(data, params, "fill")
+    if (length(idx) == 1) {
+      L$marker$color <- fill_value
+    } else {
+      L$marker$color[idx] <- fill_value[idx]
+    }
   }
   compact(L)
 }
